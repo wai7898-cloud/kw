@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙人 52 週存錢紀錄 | 永久保存版</title>
+    <style>
+        :root {
+            --rose-quartz: #F7CAC9;
+            --serenity: #92A8D1;
+            --bg: #fdfcfb;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #fdfcfb 0%, #e2eafc 100%);
+            background-attachment: fixed;
+            margin: 0;
+            padding: 20px;
+            color: #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-msg {
+            position: fixed;
+            top: 20px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 { color: #7a8eb5; margin-bottom: 5px; letter-spacing: 2px; }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border-top: 10px solid;
+        }
+
+        .p1-card { border-color: var(--rose-quartz); }
+        .p2-card { border-color: var(--serenity); }
+
+        .name-edit {
+            font-size: 1.4rem;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+            color: #444;
+            width: 100%;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .stat-box { text-align: center; flex: 1; }
+        .stat-box small { color: #999; font-size: 0.75rem; }
+        .stat-box div { font-weight: bold; font-size: 1.1rem; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 8px;
+        }
+
+        .box {
+            aspect-ratio: 1.2;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .box:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .box b { font-size: 0.9rem; }
+
+        .p1-done { background: var(--rose-quartz) !important; color: white; border-color: var(--rose-quartz); }
+        .p2-done { background: var(--serenity) !important; color: white; border-color: var(--serenity); }
+
+        .reset-btn {
+            margin-top: 40px;
+            color: #ccc;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div id="status" class="status-msg">已自動儲存進度</div>
+
+<div class="header">
+    <h1>52-WEEK CHALLENGE</h1>
+    <p>💡 數據保存在此瀏覽器，重新開啟即可看到紀錄</p>
+</div>
+
+<div class="container">
+    <div class="card p1-card">
+        <input type="text" id="p1Name" class="name-edit" value="K的計畫" onchange="manualSave()">
+        <div class="stats">
+            <div class="stat-box"><small>總金額</small><div id="p1Total" style="color:#e59a98">$0</div></div>
+            <div class="stat-box"><small>完成度</small><div id="p1Percent" style="color:#e59a98">0%</div></div>
+        </div>
+        <div id="p1Grid" class="grid"></div>
+    </div>
+
+    <div class="card p2-card">
+        <input type="text" id="p2Name" class="name-edit" value="W的計畫" onchange="manualSave()">
+        <div class="stats">
+            <div class="stat-box"><small>總金額</small><div id="p2Total" style="color:#7a8eb5">$0</div></div>
+            <div class="stat-box"><small>完成度</small><div id="p2Percent" style="color:#7a8eb5">0%</div></div>
+        </div>
+        <div id="p2Grid" class="grid"></div>
+    </div>
+</div>
+
+<button class="reset-btn" onclick="clearMemory()">清除本地所有紀錄並重置</button>
+
+<script>
+    const weekAmounts = Array.from({length: 52}, (_, i) => (i + 1) * 10);
+    
+    // 初始化資料物件
+    let savingsData = {
+        p1: { name: 'K的計畫', completed: [] },
+        p2: { name: 'W的計畫', completed: [] }
+    };
+
+    // 從本地記憶 (localStorage) 讀取資料
+    function loadFromMemory() {
+        const memory = localStorage.getItem('savings_app_v3');
+        if (memory) {
+            savingsData = JSON.parse(memory);
+            document.getElementById('p1Name').value = savingsData.p1.name;
+            document.getElementById('p2Name').value = savingsData.p2.name;
+        }
+        renderGrids();
+    }
+
+    // 儲存到本地記憶
+    function saveToMemory() {
+        localStorage.setItem('savings_app_v3', JSON.stringify(savingsData));
+        showStatus();
+    }
+
+    function showStatus() {
+        const msg = document.getElementById('status');
+        msg.style.opacity = '1';
+        setTimeout(() => { msg.style.opacity = '0'; }, 1000);
+    }
+
+    function renderGrids() {
+        ['p1', 'p2'].forEach(p => {
+            const grid = document.getElementById(p + 'Grid');
+            grid.innerHTML = '';
+            
+            weekAmounts.forEach((amt, i) => {
+                const box = document.createElement('div');
+                box.className = 'box';
+                if (savingsData[p].completed.includes(i)) {
+                    box.classList.add(p + '-done');
+                }
+                box.innerHTML = `<span>W${i+1}</span><b>$${amt}</b>`;
+                box.onclick = () => toggleWeek(p, i);
+                grid.appendChild(box);
+            });
+            updateStats(p);
+        });
+    }
+
+    function toggleWeek(player, index) {
+        const pos = savingsData[player].completed.indexOf(index);
+        if (pos > -1) {
+            savingsData[player].completed.splice(pos, 1);
+        } else {
+            savingsData[player].completed.push(index);
+        }
+        saveToMemory();
+        renderGrids();
+    }
+
+    function manualSave() {
+        savingsData.p1.name = document.getElementById('p1Name').value;
+        savingsData.p2.name = document.getElementById('p2Name').value;
+        saveToMemory();
+    }
+
+    function updateStats(p) {
+        const total = savingsData[p].completed.reduce((sum, idx) => sum + weekAmounts[idx], 0);
+        const percent = ((savingsData[p].completed.length / 52) * 100).toFixed(1);
+        document.getElementById(p + 'Total').innerText = `$${total.toLocaleString()}`;
+        document.getElementById(p + 'Percent').innerText = `${percent}%`;
+    }
+
+    function clearMemory() {
+        if(confirm('警告：這將永久刪除您與朋友的所有存錢進度！確定嗎？')) {
+            localStorage.removeItem('savings_app_v3');
+            location.reload();
+        }
+    }
+
+    // 啟動程式
+    loadFromMemory();
+</script>
+
+</body>
+</html>
