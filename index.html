@@ -78,4 +78,140 @@
             transition: all 0.2s ease;
         }
 
-        .box:hover {
+        .box:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .box b { font-size: 0.95rem; margin-top: 2px; }
+
+        /* 完成狀態：變為石英粉 */
+        .done {
+            background: var(--quartz) !important;
+            color: white;
+            border-color: var(--quartz);
+            transform: scale(0.95);
+        }
+
+        .reset-btn {
+            margin-top: 40px;
+            color: #ccc;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+
+        #save-hint {
+            position: fixed;
+            top: 20px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div id="save-hint">已自動儲存</div>
+
+<div class="header">
+    <h1>52-WEEK CHALLENGE</h1>
+    <p>✨ 第一週 10 元，每週增加 10 元 ✨</p>
+</div>
+
+<div class="card">
+    <div class="stats">
+        <div class="stat-box">
+            <small>累計金額</small>
+            <div id="totalAmount">$0</div>
+        </div>
+        <div class="stat-box">
+            <small>達成率</small>
+            <div id="progressPercent">0%</div>
+        </div>
+        <div class="stat-box">
+            <small>進度</small>
+            <div id="doneCount">0/52</div>
+        </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+</div>
+
+<button class="reset-btn" onclick="resetAll()">重置所有進度</button>
+
+<script>
+    const weekAmounts = Array.from({length: 52}, (_, i) => (i + 1) * 10);
+    let completedWeeks = [];
+
+    function init() {
+        const savedData = localStorage.getItem('savings_single_v1');
+        if (savedData) {
+            completedWeeks = JSON.parse(savedData);
+        }
+        render();
+    }
+
+    function render() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+
+        weekAmounts.forEach((amt, i) => {
+            const box = document.createElement('div');
+            box.className = 'box';
+            if (completedWeeks.includes(i)) {
+                box.classList.add('done');
+            }
+            box.innerHTML = `<span>W${i+1}</span><b>$${amt}</b>`;
+            box.onclick = () => toggleWeek(i);
+            grid.appendChild(box);
+        });
+
+        updateStats();
+    }
+
+    function toggleWeek(index) {
+        const pos = completedWeeks.indexOf(index);
+        if (pos > -1) {
+            completedWeeks.splice(pos, 1);
+        } else {
+            completedWeeks.push(index);
+        }
+        save();
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('savings_single_v1', JSON.stringify(completedWeeks));
+        const hint = document.getElementById('save-hint');
+        hint.style.opacity = '1';
+        setTimeout(() => hint.style.opacity = '0', 800);
+    }
+
+    function updateStats() {
+        const total = completedWeeks.reduce((sum, idx) => sum + weekAmounts[idx], 0);
+        const count = completedWeeks.length;
+        const percent = ((count / 52) * 100).toFixed(0);
+
+        document.getElementById('totalAmount').innerText = `$${total.toLocaleString()}`;
+        document.getElementById('progressPercent').innerText = `${percent}%`;
+        document.getElementById('doneCount').innerText = `${count}/52`;
+    }
+
+    function resetAll() {
+        if (confirm('確定要清除所有進度嗎？')) {
+            localStorage.removeItem('savings_single_v1');
+            completedWeeks = [];
+            render();
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
