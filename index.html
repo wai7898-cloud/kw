@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>52週存錢大作戰</title>
+    <title>2026 存錢挑戰 | 專屬日期版</title>
     <style>
         :root {
             --quartz: #F7CAC9; /* 石英粉 */
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-            background: linear-gradient(135deg, #fdfcfb 0%, #e2eafc 100%);
+            background: linear-gradient(135deg, #fdfcfb 0%, #eef2f3 100%);
             background-attachment: fixed;
             margin: 0;
             padding: 20px;
@@ -23,17 +23,8 @@
             align-items: center;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .header h1 {
-            color: var(--serenity);
-            letter-spacing: 2px;
-            text-shadow: 1px 1px 0px white;
-            margin-bottom: 5px;
-        }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 { color: var(--serenity); letter-spacing: 2px; margin-bottom: 5px; }
 
         .card {
             background: rgba(255, 255, 255, 0.9);
@@ -60,12 +51,12 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
             gap: 10px;
         }
 
         .box {
-            aspect-ratio: 1.1;
+            aspect-ratio: 1;
             background: white;
             border: 1px solid #eee;
             border-radius: 10px;
@@ -73,54 +64,38 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .box:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .box b { font-size: 0.95rem; margin-top: 2px; }
+        .box .date { color: #999; margin-bottom: 2px; }
+        .box b { font-size: 0.9rem; color: #444; }
 
-        /* 完成狀態：變為石英粉 */
         .done {
             background: var(--quartz) !important;
             color: white;
             border-color: var(--quartz);
-            transform: scale(0.95);
         }
+        .done .date, .done b { color: white; }
 
-        .reset-btn {
-            margin-top: 40px;
-            color: #ccc;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-decoration: underline;
-        }
-
+        .reset-btn { margin-top: 40px; color: #ccc; background: none; border: none; cursor: pointer; font-size: 0.8rem; text-decoration: underline; }
+        
         #save-hint {
-            position: fixed;
-            top: 20px;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 100;
+            position: fixed; top: 20px; background: rgba(0,0,0,0.6); color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 0.8rem;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div id="save-hint">已自動儲存</div>
+<div id="save-hint">儲存成功 ✨</div>
 
 <div class="header">
-    <h1>52-WEEK CHALLENGE</h1>
-    <p>✨ 第一週 10 元，每週增加 10 元 ✨</p>
+    <h1>2026 SAVING PLAN</h1>
+    <p>📅 每週一準時存錢，積少成多</p>
 </div>
 
 <div class="card">
@@ -134,7 +109,7 @@
             <div id="progressPercent">0%</div>
         </div>
         <div class="stat-box">
-            <small>進度</small>
+            <small>已存週數</small>
             <div id="doneCount">0/52</div>
         </div>
     </div>
@@ -142,17 +117,25 @@
     <div id="grid" class="grid"></div>
 </div>
 
-<button class="reset-btn" onclick="resetAll()">重置所有進度</button>
+<button class="reset-btn" onclick="resetAll()">重置 2026 所有進度</button>
 
 <script>
-    const weekAmounts = Array.from({length: 52}, (_, i) => (i + 1) * 10);
+    const firstMonday = new Date('2026-01-05');
     let completedWeeks = [];
 
+    // 自動生成 52 週的日期與金額
+    const weeksData = Array.from({length: 52}, (_, i) => {
+        const date = new Date(firstMonday);
+        date.setDate(firstMonday.getDate() + (i * 7));
+        return {
+            dateStr: `${date.getMonth() + 1}/${date.getDate()}`,
+            amount: (i + 1) * 10
+        };
+    });
+
     function init() {
-        const savedData = localStorage.getItem('savings_single_v1');
-        if (savedData) {
-            completedWeeks = JSON.parse(savedData);
-        }
+        const savedData = localStorage.getItem('savings_2026_v1');
+        if (savedData) completedWeeks = JSON.parse(savedData);
         render();
     }
 
@@ -160,13 +143,12 @@
         const grid = document.getElementById('grid');
         grid.innerHTML = '';
 
-        weekAmounts.forEach((amt, i) => {
+        weeksData.forEach((data, i) => {
             const box = document.createElement('div');
             box.className = 'box';
-            if (completedWeeks.includes(i)) {
-                box.classList.add('done');
-            }
-            box.innerHTML = `<span>W${i+1}</span><b>$${amt}</b>`;
+            if (completedWeeks.includes(i)) box.classList.add('done');
+            
+            box.innerHTML = `<span class="date">${data.dateStr}</span><b>$${data.amount}</b>`;
             box.onclick = () => toggleWeek(i);
             grid.appendChild(box);
         });
@@ -176,24 +158,21 @@
 
     function toggleWeek(index) {
         const pos = completedWeeks.indexOf(index);
-        if (pos > -1) {
-            completedWeeks.splice(pos, 1);
-        } else {
-            completedWeeks.push(index);
-        }
+        if (pos > -1) completedWeeks.splice(pos, 1);
+        else completedWeeks.push(index);
         save();
         render();
     }
 
     function save() {
-        localStorage.setItem('savings_single_v1', JSON.stringify(completedWeeks));
+        localStorage.setItem('savings_2026_v1', JSON.stringify(completedWeeks));
         const hint = document.getElementById('save-hint');
         hint.style.opacity = '1';
         setTimeout(() => hint.style.opacity = '0', 800);
     }
 
     function updateStats() {
-        const total = completedWeeks.reduce((sum, idx) => sum + weekAmounts[idx], 0);
+        const total = completedWeeks.reduce((sum, idx) => sum + weeksData[idx].amount, 0);
         const count = completedWeeks.length;
         const percent = ((count / 52) * 100).toFixed(0);
 
@@ -203,8 +182,8 @@
     }
 
     function resetAll() {
-        if (confirm('確定要清除所有進度嗎？')) {
-            localStorage.removeItem('savings_single_v1');
+        if (confirm('確定要清除 2026 年的所有進度嗎？')) {
+            localStorage.removeItem('savings_2026_v1');
             completedWeeks = [];
             render();
         }
